@@ -15,11 +15,11 @@ class TcpSocketServerNode(Node):
         
         # 声明 ROS 2 参数
         self.declare_parameter('lport', 8889)
-        self.declare_parameter('uart_path', '/tmp/wifi2serial')
+        self.declare_parameter('port', '/tmp/wifi2serial')
         
         # 获取 ROS 2 参数
         self.lport = self.get_parameter('lport').get_parameter_value().integer_value
-        self.uart_path = self.get_parameter('uart_path').get_parameter_value().string_value
+        self.port = self.get_parameter('port').get_parameter_value().string_value
 
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -28,11 +28,11 @@ class TcpSocketServerNode(Node):
         s.listen(1)
         
         master, slave = pty.openpty()
-        if os.path.exists(self.uart_path):
-            os.remove(self.uart_path)
-        os.symlink(os.ttyname(slave), self.uart_path)
+        if os.path.exists(self.port):
+            os.remove(self.port)
+        os.symlink(os.ttyname(slave), self.port)
 
-        self.get_logger().info(f"TCP端口:{self.lport}，已映射到串口设备:{self.uart_path}")
+        self.get_logger().info(f"TCP端口:{self.lport}，已映射到串口设备:{self.port}")
         mypoll = select.poll()
         mypoll.register(master, select.POLLIN)
         try:
