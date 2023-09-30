@@ -7,6 +7,7 @@ import select
 import subprocess
 import rclpy
 from rclpy.node import Node
+import time
 
 class TcpSocketServerNode(Node):
     def __init__(self):
@@ -24,41 +25,49 @@ class TcpSocketServerNode(Node):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(('0.0.0.0', self.lport))
-        s.listen(5)
+        s.listen(1)
+        
         master, slave = pty.openpty()
         if os.path.exists(self.uart_path):
             os.remove(self.uart_path)
         os.symlink(os.ttyname(slave), self.uart_path)
+
         self.get_logger().info(f"TCP端口:{self.lport}，已映射到串口设备:{self.uart_path}")
         mypoll = select.poll()
         mypoll.register(master, select.POLLIN)
         try:
             while True:
                 self.get_logger().info("等待接受连接..")
+                s.settimeout(None)
                 client, client_address = s.accept()
                 mypoll.register(client.fileno(), select.POLLIN)
                 self.get_logger().info(f'来自{client_address}的连接已建立')
                 is_connect = True
+                last_exchange_data_time = time.time()
                 try:
                     while is_connect:
                         fdlist = mypoll.poll(256)
                         for fd, event in fdlist:
+                            last_exchange_data_time = time.time()
                             data = os.read(fd, 256)
                             write_fd = client.fileno() if fd == master else master
                             if len(data) == 0:
                                 is_connect = False
                                 break
+                            # print(write_fd,data,event)
                             os.write(write_fd, data)
-                except ConnectionResetError:
+                        # 如果一段时间没有任何数据则断开连接
+                        if time.time()-last_exchange_data_time>3:
+                            is_connect = False
+                            break
+                except Exception:
                     is_connect = False
-                    self.get_logger().info("远程被迫断开链接")
                 finally:
                     mypoll.unregister(client.fileno())
+                    client.close()
         finally:
             s.close()
-            os.close(master)
-            os.close(slave)
-            os.remove(self.uart_path)
+
 
 def main():
     rclpy.init()
