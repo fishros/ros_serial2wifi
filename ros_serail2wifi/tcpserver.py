@@ -14,25 +14,25 @@ class TcpSocketServerNode(Node):
         super().__init__('tcp_socket_server_node')
         
         # 声明 ROS 2 参数
-        self.declare_parameter('lport', 8889)
-        self.declare_parameter('port', '/tmp/wifi2serial')
+        self.declare_parameter('tcp_port', 8889)
+        self.declare_parameter('serial_port', '/tmp/laserport')
         
         # 获取 ROS 2 参数
-        self.lport = self.get_parameter('lport').get_parameter_value().integer_value
-        self.port = self.get_parameter('port').get_parameter_value().string_value
+        self.tcp_port = self.get_parameter('tcp_port').get_parameter_value().integer_value
+        self.serial_port = self.get_parameter('serial_port').get_parameter_value().string_value
 
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(('0.0.0.0', self.lport))
+        s.bind(('0.0.0.0', self.tcp_port))
         s.listen(1)
         
         master, slave = pty.openpty()
-        if os.path.exists(self.port):
-            os.remove(self.port)
-        os.symlink(os.ttyname(slave), self.port)
+        if os.path.exists(self.serial_port):
+            os.remove(self.serial_port)
+        os.symlink(os.ttyname(slave), self.serial_port)
 
-        self.get_logger().info(f"TCP端口:{self.lport}，已映射到串口设备:{self.port}")
+        self.get_logger().info(f"TCP端口:{self.tcp_port}，已映射到串口设备:{self.serial_port}")
         mypoll = select.poll()
         mypoll.register(master, select.POLLIN)
         try:
@@ -57,8 +57,9 @@ class TcpSocketServerNode(Node):
                             # print(write_fd,data,event)
                             os.write(write_fd, data)
                         # 如果一段时间没有任何数据则断开连接
-                        if time.time()-last_exchange_data_time>3:
+                        if time.time()-last_exchange_data_time>5:
                             is_connect = False
+                            print('5s no data.')
                             break
                 except Exception:
                     is_connect = False
