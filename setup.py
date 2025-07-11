@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'tcp_server=ros_serail2wifi.tcpserver:main'
+            'udp_server=ros_serail2wifi.udpserver:main'
         ],
     },
 )
