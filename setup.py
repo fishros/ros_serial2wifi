@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'ros_serail2wifi'
+package_name = 'ros_serial2wifi'
 
 setup(
     name=package_name,
@@ -20,8 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'tcp_server=ros_serail2wifi.tcpserver:main'
-            'udp_server=ros_serail2wifi.udpserver:main'
+            'tcp_server=ros_serial2wifi.tcpserver:main',
+            'udp_server=ros_serial2wifi.udpserver:main'
         ],
     },
 )
